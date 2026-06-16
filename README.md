@@ -1,673 +1,662 @@
-# aws-devops-project
+# AWS EKS DevOps Platform – End-to-End Implementation
 
+## Project Overview
 
-It will include:
+This project demonstrates a complete production-grade DevOps platform implementation on AWS using modern cloud-native technologies.
 
-Project overview
-Architecture
-Repository structure
-AWS infrastructure
-Terraform
-EKS
-CI/CD
-Helm
-Monitoring
-ALB Controller
-ExternalDNS
-ACM + Route53
-ArgoCD GitOps
-Logging stack (planned/completing phase)
-Complete command flow
-Future improvements
+The platform automates infrastructure provisioning, application deployment, monitoring, ingress management, DNS automation, SSL termination, and GitOps-based delivery.
 
-You can directly copy this into your README.md.
+### Objectives
 
-AWS EKS DevOps Platform - End to End Implementation
-Project Overview
+* Infrastructure as Code (Terraform)
+* Kubernetes Orchestration (Amazon EKS)
+* Containerization (Docker)
+* Container Registry (Amazon ECR)
+* CI/CD Automation (GitHub Actions)
+* Kubernetes Package Management (Helm)
+* Monitoring & Observability (Prometheus + Grafana)
+* Ingress Management (AWS Load Balancer Controller)
+* DNS Automation (ExternalDNS)
+* HTTPS Management (AWS ACM)
+* GitOps Deployment (ArgoCD)
+* Centralized Logging (Loki + Promtail)
 
-This project demonstrates a complete production-style DevOps implementation on AWS.
+---
 
-The objective was to deploy a containerized Flask application on Amazon EKS with:
+# High-Level Architecture
 
-Infrastructure as Code using Terraform
-Container image management using Amazon ECR
-CI/CD automation using GitHub Actions
-Kubernetes deployment using Helm
-Monitoring using Prometheus and Grafana
-Application Load Balancing using AWS ALB Controller
-DNS automation using ExternalDNS
-HTTPS using ACM certificates
-GitOps deployment using ArgoCD
-Centralized logging using Loki + Promtail
-High Level Architecture
-                 Developer
-                    |
-                    |
-                GitHub Repo
-                    |
-                    |
-            GitHub Actions CI/CD
-                    |
-          ---------------------
-          |                   |
-          |                   |
-        Docker              Terraform
-          |                   |
-          |                   |
-        AWS ECR             AWS VPC
-                              |
-                              |
-                           EKS Cluster
-                              |
-        ------------------------------------------------
-        |                    |                         |
-     Helm App            Monitoring               GitOps
-        |                    |                         |
-    Flask App          Prometheus/Grafana          ArgoCD
-        |
-        |
-    ALB Controller
-        |
-        |
-    AWS Application Load Balancer
-        |
-        |
-    ExternalDNS
-        |
-        |
-    Route53
-        |
-        |
-    ACM HTTPS Certificate
-Repository Structure
+```text
+                         +-------------------+
+                         |    Developer      |
+                         +---------+---------+
+                                   |
+                                   v
+                         +-------------------+
+                         |      GitHub       |
+                         +---------+---------+
+                                   |
+                                   v
+                         +-------------------+
+                         | GitHub Actions CI |
+                         +---------+---------+
+                                   |
+              +--------------------+-------------------+
+              |                                        |
+              v                                        v
+     +------------------+                  +------------------+
+     |   Docker Build   |                  | Terraform Apply  |
+     +------------------+                  +------------------+
+              |                                        |
+              v                                        v
+     +------------------+                  +------------------+
+     |    Amazon ECR    |                  | AWS Infrastructure|
+     +------------------+                  +------------------+
+                                                       |
+                                                       v
+                                             +------------------+
+                                             | Amazon EKS       |
+                                             +--------+---------+
+                                                      |
+                   +----------------------------------+--------------------------------+
+                   |                                  |                                |
+                   v                                  v                                v
+           +---------------+                 +---------------+               +---------------+
+           | Flask App     |                 | Prometheus    |               | ArgoCD        |
+           | (Helm Chart)  |                 | Grafana       |               | GitOps        |
+           +-------+-------+                 +---------------+               +---------------+
+                   |
+                   v
+         +------------------------+
+         | AWS ALB Controller     |
+         +-----------+------------+
+                     |
+                     v
+         +------------------------+
+         | Application Load       |
+         | Balancer (ALB)         |
+         +-----------+------------+
+                     |
+                     v
+         +------------------------+
+         | ExternalDNS + Route53  |
+         +-----------+------------+
+                     |
+                     v
+         +------------------------+
+         | ACM SSL Certificate    |
+         +-----------+------------+
+                     |
+                     v
+                End Users
+```
+
+---
+
+# Repository Structure
+
+```text
 aws-devops-project
-|
+│
 ├── terraform
-│   |
 │   ├── vpc
 │   ├── eks
 │   ├── iam
 │   └── environments
 │
-├── application
-│   |
+├── app
 │   ├── Dockerfile
-│   └── Flask application
+│   ├── requirements.txt
+│   └── app.py
 │
 ├── kubernetes
-│   |
 │   ├── deployment.yaml
 │   ├── service.yaml
 │   └── ingress.yaml
 │
 ├── helm
-│   |
 │   └── flask-app
-│       |
 │       ├── Chart.yaml
 │       ├── values.yaml
 │       └── templates
 │
-├── alb-controller
-│
-├── external-dns
-│
 ├── argocd
-│
+├── alb-controller
+├── external-dns
 ├── logging
 │
 └── .github
-    |
     └── workflows
-Phase 1: AWS Account Preparation
+```
 
-Required tools:
+---
 
-Installed:
+# Phase 1 – AWS Account Preparation
 
-AWS CLI
-Terraform
-kubectl
-Helm
-eksctl
-Docker
-Git
+## Required Tools
 
-AWS configuration:
+* AWS CLI
+* Terraform
+* kubectl
+* Helm
+* Docker
+* Git
+* eksctl
 
+## Configure AWS
+
+```bash
 aws configure
+```
 
 Verify:
 
+```bash
 aws sts get-caller-identity
-Phase 2: Infrastructure Provisioning Using Terraform
+```
 
-Terraform created:
+---
 
-VPC
+# Phase 2 – Infrastructure Provisioning using Terraform
 
-Components:
+## Resources Created
 
-VPC
-Public subnets
-Private subnets
-Internet Gateway
-NAT Gateway
-Route Tables
+### Networking
 
-Architecture:
+* VPC
+* Public Subnets
+* Private Subnets
+* Internet Gateway
+* NAT Gateway
+* Route Tables
 
-VPC
+### Architecture
 
-10.0.0.0/16
+```text
+VPC (10.0.0.0/16)
 
-|
-|-- Public Subnets
-|
-|-- Private Subnets
-       |
-       |
-      EKS Nodes
+├── Public Subnet A
+├── Public Subnet B
+│
+├── Private Subnet A
+└── Private Subnet B
+      │
+      ▼
+   EKS Nodes
+```
 
-Terraform deployment:
+## Deployment
 
+```bash
 terraform init
 
 terraform plan
 
 terraform apply
+```
 
 Outputs:
 
-cluster_name
-vpc_id
-public_subnet_ids
-private_subnet_ids
-Phase 3: EKS Cluster Setup
+* cluster_name
+* vpc_id
+* public_subnet_ids
+* private_subnet_ids
 
-Verify cluster:
+---
 
-aws eks list-clusters \
---region ap-south-1
+# Phase 3 – Amazon EKS Cluster Setup
 
-Cluster:
+## Verify Cluster
 
-devops-eks
+```bash
+aws eks list-clusters --region ap-south-1
+```
 
-Status:
+Check Status:
 
+```bash
 aws eks describe-cluster \
 --name devops-eks \
 --region ap-south-1 \
 --query cluster.status
-
-Output:
-
-ACTIVE
-
-Configure kubectl:
-
-aws eks update-kubeconfig \
---name devops-eks \
---region ap-south-1
-
-Verify:
-
-kubectl get nodes
-
-Output:
-
-Ready
-Phase 4: Containerization
-
-Docker image created:
-
-flask-app
-
-Build:
-
-docker build -t flask-app .
-
-Run locally:
-
-docker run -p 5000:5000 flask-app
-Phase 5: Amazon ECR Setup
-
-Repository:
-
-flask-app
-
-Login:
-
-aws ecr get-login-password \
---region ap-south-1 |
-docker login \
---username AWS \
---password-stdin <ACCOUNT>.dkr.ecr.ap-south-1.amazonaws.com
-
-Build:
-
-docker build \
--t flask-app .
-
-Tag:
-
-docker tag flask-app \
-<ECR_URL>/flask-app:latest
-
-Push:
-
-docker push \
-<ECR_URL>/flask-app:latest
-Phase 6: GitHub Actions CI/CD
-
-Pipeline performs:
-
-Git Push
-
-     |
-     |
-GitHub Actions
-
-     |
-     |
-Docker Build
-
-     |
-     |
-Push Image
-
-     |
-     |
-Deploy Kubernetes
-
-Workflow:
-
-.github/workflows
-
-microservice-ci.yaml
-deploy.yaml
-
-Actions:
-
-Checkout code
-Configure AWS
-Login ECR
-Build image
-Push image
-Update deployment
-Phase 7: Kubernetes Deployment
-
-Created:
-
-deployment.yaml
-
-service.yaml
-
-Deployment:
-
-kubectl apply -f deployment.yaml
-
-Service:
-
-kubectl apply -f service.yaml
-
-Verify:
-
-kubectl get pods
-
-kubectl get svc
-
-Application exposed through:
-
-AWS LoadBalancer Service
-Phase 8: Helm Packaging
-
-Created Helm chart:
-
-helm/flask-app
-
-Structure:
-
-flask-app
-
-Chart.yaml
-
-values.yaml
-
-templates/
-
-deployment.yaml
-
-service.yaml
-
-Validate:
-
-helm lint flask-app
-
-Install:
-
-helm install flask-app ./helm/flask-app
-
-Verify:
-
-helm list
-
-kubectl get pods
-Phase 9: Monitoring Setup
-
-Installed:
-
-kube-prometheus-stack
-
-Components:
-
-Prometheus
-Grafana
-AlertManager
-Node Exporter
-
-Namespace:
-
-monitoring
-
-Install:
-
-helm install monitoring \
-prometheus-community/kube-prometheus-stack \
--n monitoring
-
-Verify:
-
-kubectl get pods -n monitoring
-Phase 10: AWS Load Balancer Controller
-
-Purpose:
-
-Creates AWS ALB automatically from Kubernetes Ingress.
-
-Installed:
-
-aws-load-balancer-controller
-
-Created:
-
-IAM Policy
-IAM Role
-IRSA
-Service Account
-
-Verify:
-
-kubectl get pods -n kube-system
+```
 
 Expected:
 
-aws-load-balancer-controller Running
-Phase 11: Application Ingress
+```text
+ACTIVE
+```
 
-Ingress:
+Configure kubectl:
 
-flask-app-ingress
-
-Annotations:
-
-alb.ingress.kubernetes.io/scheme: internet-facing
-
-alb.ingress.kubernetes.io/target-type: ip
-
-Result:
-
-Kubernetes Ingress
-
-↓
-
-AWS ALB
+```bash
+aws eks update-kubeconfig \
+--name devops-eks \
+--region ap-south-1
+```
 
 Verify:
 
-kubectl get ingress
-Phase 12: HTTPS Configuration
+```bash
+kubectl get nodes
+```
 
-ACM Certificate:
+Expected:
 
-arn:aws:acm:ap-south-1:
-523835808362:
-certificate/
-3953292e-8ded-4c45-b8f6-754579449b32
+```text
+Ready
+```
 
-Ingress annotations:
+---
 
-alb.ingress.kubernetes.io/certificate-arn
+# Phase 4 – Application Containerization
 
-alb.ingress.kubernetes.io/listen-ports:
-[{"HTTP":80},{"HTTPS":443}]
+## Build Docker Image
 
-alb.ingress.kubernetes.io/ssl-redirect: "443"
+```bash
+docker build -t flask-app .
+```
 
-Result:
+Run Locally:
 
-https://app.mydevop.net
-Phase 13: ExternalDNS
+```bash
+docker run -p 5000:5000 flask-app
+```
 
-Purpose:
+---
 
-Automatically creates Route53 records.
+# Phase 5 – Amazon ECR Setup
 
-Flow:
+## Login
 
-Kubernetes Ingress
+```bash
+aws ecr get-login-password \
+--region ap-south-1 | docker login \
+--username AWS \
+--password-stdin <ECR_URL>
+```
 
-        |
+## Push Image
 
-ExternalDNS
+```bash
+docker tag flask-app <ECR_URL>/flask-app:latest
 
-        |
+docker push <ECR_URL>/flask-app:latest
+```
 
-Route53
+---
 
-        |
+# Phase 6 – GitHub Actions CI/CD
 
-app.mydevop.net
+## CI/CD Flow
 
-Installed:
+```text
+Developer Push
+       │
+       ▼
+GitHub Repository
+       │
+       ▼
+GitHub Actions
+       │
+ ┌─────┴─────┐
+ │           │
+ ▼           ▼
+Build     Security Scan
+ │
+ ▼
+Docker Image
+ │
+ ▼
+Amazon ECR
+ │
+ ▼
+EKS Deployment
+```
 
-helm install external-dns \
-external-dns/external-dns \
--n kube-system
+## Pipeline Tasks
 
-Configuration:
+* Checkout Code
+* Configure AWS Credentials
+* Docker Build
+* Push Image to ECR
+* Deploy to EKS
 
-domain-filter=mydevop.net
+---
 
-Result:
+# Phase 7 – Kubernetes Deployment
 
-Automatically creates:
+Resources:
 
-app.mydevop.net
-Phase 14: ArgoCD GitOps
+* Deployment
+* Service
+* Ingress
 
-Installed:
+Deployment:
 
-ArgoCD
+```bash
+kubectl apply -f deployment.yaml
+```
+
+Service:
+
+```bash
+kubectl apply -f service.yaml
+```
+
+Verification:
+
+```bash
+kubectl get pods
+kubectl get svc
+```
+
+---
+
+# Phase 8 – Helm Packaging
+
+## Helm Chart Structure
+
+```text
+helm/flask-app
+
+├── Chart.yaml
+├── values.yaml
+└── templates
+    ├── deployment.yaml
+    ├── service.yaml
+    └── ingress.yaml
+```
+
+Validate:
+
+```bash
+helm lint flask-app
+```
+
+Install:
+
+```bash
+helm install flask-app ./helm/flask-app
+```
+
+---
+
+# Phase 9 – Monitoring Stack
+
+## Components
+
+* Prometheus
+* Grafana
+* AlertManager
+* Node Exporter
 
 Namespace:
 
-argocd
+```bash
+monitoring
+```
 
 Install:
 
-helm repo add argo \
-https://argoproj.github.io/argo-helm
+```bash
+helm install monitoring \
+prometheus-community/kube-prometheus-stack \
+-n monitoring
+```
 
+Monitoring Flow:
 
-helm install argocd \
-argo/argo-cd \
--n argocd
+```text
+Kubernetes Cluster
+        │
+        ▼
+   Prometheus
+        │
+        ▼
+    Grafana
+        │
+        ▼
+ Dashboards & Alerts
+```
 
-Verify:
+---
 
-kubectl get pods -n argocd
+# Phase 10 – AWS Load Balancer Controller
+
+Purpose:
+
+Automatically provisions AWS Application Load Balancers from Kubernetes Ingress resources.
 
 Components:
 
-Application Controller
+* IAM Policy
+* IAM Role
+* IRSA
+* Controller Deployment
 
-Repo Server
+Verification:
 
-API Server
+```bash
+kubectl get pods -n kube-system
+```
 
-Redis
+Expected:
 
-Dex
+```text
+aws-load-balancer-controller Running
+```
+
+---
+
+# Phase 11 – Application Ingress
+
+Ingress Annotations
+
+```yaml
+alb.ingress.kubernetes.io/scheme: internet-facing
+alb.ingress.kubernetes.io/target-type: ip
+```
+
+Flow:
+
+```text
+Ingress
+   │
+   ▼
+AWS ALB
+   │
+   ▼
+Application Pods
+```
+
+---
+
+# Phase 12 – HTTPS using ACM
+
+Certificate:
+
+```text
+AWS Certificate Manager (ACM)
+```
+
+Ingress Configuration:
+
+```yaml
+alb.ingress.kubernetes.io/certificate-arn
+alb.ingress.kubernetes.io/listen-ports
+alb.ingress.kubernetes.io/ssl-redirect
+```
+
+Flow:
+
+```text
+User
+ │
+ ▼
+HTTPS
+ │
+ ▼
+ACM Certificate
+ │
+ ▼
+AWS ALB
+ │
+ ▼
+Kubernetes Service
+ │
+ ▼
+Pod
+```
+
+---
+
+# Phase 13 – ExternalDNS
+
+Purpose:
+
+Automatically manages Route53 DNS records.
+
+Flow:
+
+```text
+Kubernetes Ingress
+        │
+        ▼
+    ExternalDNS
+        │
+        ▼
+      Route53
+        │
+        ▼
+app.mydevop.net
+```
+
+---
+
+# Phase 14 – ArgoCD GitOps
+
+Components:
+
+* Application Controller
+* API Server
+* Repo Server
+* Redis
+* Dex
 
 GitOps Flow:
 
+```text
 Developer
-
- |
-
-GitHub
-
- |
-
+    │
+    ▼
+GitHub Repository
+    │
+    ▼
 ArgoCD
+    │
+    ▼
+Kubernetes Cluster
+    │
+    ▼
+Application Updated
+```
 
- |
+Benefits:
 
-Kubernetes
+* Continuous Reconciliation
+* Drift Detection
+* Automated Deployment
+* Rollback Capability
 
- |
+---
 
-Application
+# Phase 15 – Centralized Logging (Planned)
 
-Future deployment:
+## Logging Architecture
 
-git push
-
-↓
-
-ArgoCD detects change
-
-↓
-
-Automatic sync
-
-↓
-
-New deployment
-Phase 15: Centralized Logging (Implementation Pending)
-Objective
-
-Collect Kubernetes application logs centrally.
-
-Stack:
-
-Flask Container
-
-       |
-
-Container stdout
-
-       |
-
+```text
+Flask Application
+        │
+        ▼
+Container Stdout
+        │
+        ▼
 Promtail
-
-       |
-
+        │
+        ▼
 Loki
-
-       |
-
+        │
+        ▼
 Grafana
+```
 
 Components:
 
-Loki
+* Loki
+* Promtail
+* Grafana
 
-Stores logs.
+Verification:
 
-Promtail
-
-Collects logs from Kubernetes nodes.
-
-Grafana
-
-Visualizes logs.
-
-Install:
-
-helm repo add grafana \
-https://grafana.github.io/helm-charts
-
-Install Loki:
-
-helm install loki \
-grafana/loki-stack \
--n logging
-
-Install Promtail:
-
-helm install promtail \
-grafana/promtail \
--n logging
-
-Verify:
-
+```bash
 kubectl get pods -n logging
+```
 
-Grafana:
+---
 
-Add datasource:
+# Current Project Status
 
-Loki
+| Component             | Status      |
+| --------------------- | ----------- |
+| Terraform             | Completed   |
+| VPC                   | Completed   |
+| EKS                   | Completed   |
+| Docker                | Completed   |
+| ECR                   | Completed   |
+| GitHub Actions        | Completed   |
+| Kubernetes Deployment | Completed   |
+| Helm                  | Completed   |
+| Prometheus            | Completed   |
+| Grafana               | Completed   |
+| AWS ALB Controller    | Completed   |
+| ACM HTTPS             | Completed   |
+| Route53               | Completed   |
+| ExternalDNS           | Completed   |
+| ArgoCD Installation   | Completed   |
+| GitOps Sync           | In Progress |
+| Loki Logging          | Planned     |
 
-Query:
+---
 
-{namespace="default"}
-Current Completed Status
-Component	Status
-Terraform	Completed
-VPC	Completed
-EKS	Completed
-Docker	Completed
-ECR	Completed
-GitHub Actions	Completed
-Kubernetes Deployment	Completed
-Helm	Completed
-Prometheus	Completed
-Grafana Monitoring	Completed
-ALB Controller	Completed
-ACM HTTPS	Completed
-Route53	Completed
-ExternalDNS	Completed
-ArgoCD Installation	Completed
-GitOps Sync	Next
-Loki Logging	Next
-Final Production Architecture
+# Final Production Architecture
+
+```text
 GitHub
- |
- |
+   │
+   ▼
 GitHub Actions
- |
- |
-ECR
- |
- |
-EKS
- |
- |
-Helm / ArgoCD
- |
- |
-Flask Application
- |
- +----------------+
- |                |
-ALB             Logs
- |                |
-Route53         Loki
- |
+   │
+   ▼
+Amazon ECR
+   │
+   ▼
+Amazon EKS
+   │
+   ├── Helm Deployments
+   ├── ArgoCD GitOps
+   ├── Prometheus
+   ├── Grafana
+   └── Loki
+          │
+          ▼
+AWS ALB
+   │
+   ▼
+Route53 DNS
+   │
+   ▼
 ACM HTTPS
- |
+   │
+   ▼
 Users
+```
