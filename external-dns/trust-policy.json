@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::523835808362:oidc-provider/oidc.eks.ap-south-1.amazonaws.com/id/411EBA7950DF6DA79C6CB6CF4915B13D"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "oidc.eks.ap-south-1.amazonaws.com/id/411EBA7950DF6DA79C6CB6CF4915B13D:sub": "system:serviceaccount:kube-system:external-dns",
+          "oidc.eks.ap-south-1.amazonaws.com/id/411EBA7950DF6DA79C6CB6CF4915B13D:aud": "sts.amazonaws.com"
+        }
+      }
+    }
+  ]
+}

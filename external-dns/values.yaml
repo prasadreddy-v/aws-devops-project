@@ -1,0 +1,13 @@
+provider: aws
+
+policy: sync
+
+serviceAccount:
+  create: false
+  name: external-dns
+
+aws:
+  zoneType: public
+
+domainFilters:
+  - mydevop.net
