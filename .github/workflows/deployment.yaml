@@ -47,6 +47,10 @@ jobs:
           docker push \
           523835808362.dkr.ecr.ap-south-1.amazonaws.com/$ECR_REPOSITORY:${{ github.sha }}
 
+      - name: Who am I
+        run: |
+          aws sts get-caller-identity    
+
       - name: Configure kubectl
         run: |
           aws eks update-kubeconfig \
