@@ -53,6 +53,11 @@ jobs:
           --region $AWS_REGION \
           --name $CLUSTER_NAME
 
+      - name: Debug EKS Access
+        run: |
+          kubectl config current-context
+          kubectl get nodes    
+
       - name: Update Deployment
         run: |
           kubectl set image deployment/flask-app \
