@@ -62,7 +62,8 @@ jobs:
           kubectl config current-context
           kubectl get nodes    
 
-      - name: Update Deployment
+      - name: Deploy with Helm
         run: |
-          kubectl set image deployment/flask-app \
-          flask-app=523835808362.dkr.ecr.ap-south-1.amazonaws.com/flask-app:${{ github.sha }}
+          helm upgrade --install flask-app ./helm/flask-app \
+            --set image.repository=523835808362.dkr.ecr.ap-south-1.amazonaws.com/flask-app \
+            --set image.tag=${{ github.sha }}

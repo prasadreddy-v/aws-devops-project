@@ -2,11 +2,11 @@ apiVersion: v1
 kind: Service
 
 metadata:
-  name: {{ .Release.Name }}
+  name: flask-app
 
 spec:
   selector:
-    app.kubernetes.io/name: {{ .Chart.Name }}
+    app: flask-app
 
   ports:
     - port: {{ .Values.service.port }}
